@@ -17,9 +17,12 @@ jobs:
 
       - name: Install Security Tools
         run: |
-          pip install pip-audit bandit
-          curl -sSL https://github.com/zricethezav/gitleaks/releases/latest/download/gitleaks-linux-amd64 -o gitleaks
-          chmod +x gitleaks
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Upgrade Vulnerable Dependencies
+        run: |
+          pip-audit --fix
 
       - name: Run Dependency Audit
         run: pip-audit
