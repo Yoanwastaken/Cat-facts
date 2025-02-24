@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cat Facts Web App</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        h1 { color: #333; }
+        form { margin: 15px auto; }
+        input, button { padding: 8px; margin: 5px; }
+        .fact-box, .response-box { border: 1px solid #ddd; padding: 15px; margin: 10px auto; width: 60%; text-align: left; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🐱 Cat Facts Web App</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="error">
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form action="/get_single_fact" method="post">
+        <button type="submit">Get Single Cat Fact</button>
+    </form>
+
+    <form action="/get_multiple_facts" method="post">
+        <input type="number" name="count" placeholder="Number of facts" min="1" max="10" required>
+        <button type="submit">Get Multiple Cat Facts</button>
+    </form>
+
+    <form action="/create_fact" method="post">
+        <input type="text" name="new_fact" placeholder="New cat fact" required>
+        <button type="submit">Create Fact (POST)</button>
+    </form>
+
+    <form action="/update_fact" method="post">
+        <input type="text" name="update_id" placeholder="Resource ID" required>
+        <input type="text" name="updated_fact" placeholder="Updated cat fact" required>
+        <button type="submit">Update Fact (PUT)</button>
+    </form>
+
+    <form action="/delete_fact" method="post">
+        <input type="text" name="delete_id" placeholder="Resource ID" required>
+        <button type="submit">Delete Fact (DELETE)</button>
+    </form>
+
+    {% if fact %}
+    <div class="fact-box">
+        <h3>Single Cat Fact:</h3>
+        <p>{{ fact }}</p>
+    </div>
+    {% endif %}
+
+    {% if facts %}
+    <div class="fact-box">
+        <h3>Multiple Cat Facts:</h3>
+        <ul>
+            {% for f in facts %}
+            <li>{{ f }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if response %}
+    <div class="response-box">
+        <h3>API Response:</h3>
+        <pre>{{ response | tojson(indent=2) }}</pre>
+    </div>
+    {% endif %}
+</body>
+</html>
