@@ -2,7 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from authlib.integrations.flask_client import OAuth
 import requests
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'supersecretkey'  # Change this for production
@@ -11,6 +13,22 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'  # Redirect to login if user is not authenticated
+
+# Google OAuth Configuration
+app.config['GOOGLE_CLIENT_ID'] = "YOUR_GOOGLE_CLIENT_ID"
+app.config['GOOGLE_CLIENT_SECRET'] = "YOUR_GOOGLE_CLIENT_SECRET"
+
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id=app.config["GOOGLE_CLIENT_ID"],
+    client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    authorize_token_url="https://oauth2.googleapis.com/token",
+    authorize_redirect_uri="http://127.0.0.1:5000/login/google/callback",
+    client_kwargs={"scope": "openid email profile"},
+)
+# end
 
 # Cat Facts API base URL for GET
 CAT_FACTS_URL = "https://catfact.ninja/fact"
@@ -24,6 +42,9 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    # google
+    #google_id = db.Column(db.String(200), unique=True, nullable=True)  # Google ID for OAuth users
+    #google_id = db.Column(db.String(200), unique=True, nullable=True)  # Nullable for email users
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -33,6 +54,34 @@ def load_user(user_id):
 @app.route('/')
 def home():
     return render_template('index.html', fact=None, facts=[], response=None)
+
+# Google Login Route
+@app.route('/login/google')
+def google_login():
+    return google.authorize_redirect(url_for('google_callback', _external=True))
+
+@app.route('/login/google/callback')
+def google_callback():
+    token = google.authorize_access_token()
+    user_info = google.get("https://www.googleapis.com/oauth2/v2/userinfo").json()
+    
+    google_id = user_info["id"]
+    email = user_info["email"]
+    username = user_info.get("name", email)  # Use name or email as username
+
+    #Check if the user already exists
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        user = User(username=username, email=email, google_id=google_id)
+        db.session.add(user)
+        db.session.commit()
+
+    login_user(user)
+    flash("Google Login successful!", "success")
+    return redirect(url_for("dashboard"))
+
+# end
 
 # Register Route
 @app.route('/register', methods=['GET', 'POST'])
